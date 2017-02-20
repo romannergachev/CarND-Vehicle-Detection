@@ -11,8 +11,8 @@ from skimage.feature import hog
 from sklearn.model_selection import train_test_split
 
 
-feature_array = hog(img, orientations=orient, pixels_per_cell=(pix_per_cell, pix_per_cell),
-                    cells_per_block=(cell_per_block, cell_per_block), visualise=False, feature_vector=False)
+# feature_array = hog(img, orientations=orient, pixels_per_cell=(pix_per_cell, pix_per_cell),
+#                     cells_per_block=(cell_per_block, cell_per_block), visualise=False, feature_vector=False)
 
 
 def get_hog_features(img, orient, pix_per_cell, cell_per_block,
@@ -61,8 +61,8 @@ def extract_features(imgs, color_space='RGB', spatial_size=(32, 32),
                      pix_per_cell=8, cell_per_block=2, hog_channel=0,
                      spatial_feat=True, hist_feat=True, hog_feat=True):
     # Create a list to append feature vectors to
-    selected = random.choice(imgs)
-    imgs = [selected]
+    # selected = random.choice(imgs)
+    # imgs = [selected]
 
     features = []
     # Iterate through the list of images
@@ -164,14 +164,14 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
 
 
 # Divide up into cars and notcars
-notcars = glob.glob('non-vehicles/GTI/*.png')
-cars = glob.glob('vehicles/GTI_Left/*.png')
-
-colorspace = 'YCrCb' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
-orient = 12
-pix_per_cell = 4
-cell_per_block = 2
-hog_channel = 0
+# notcars = glob.glob('non-vehicles/GTI/*.png')
+# cars = glob.glob('vehicles/GTI_Left/*.png')
+#
+# colorspace = 'YCrCb' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+# orient = 12
+# pix_per_cell = 4
+# cell_per_block = 2
+# hog_channel = 0
 
 #hsv channel = 0, 0.985
 #luv channel = 2 or 0, 0.975
@@ -186,6 +186,6 @@ hog_channel = 0
 # car_features = extract_features(cars, cspace=colorspace, orient=orient,
 #                         pix_per_cell=pix_per_cell, cell_per_block=cell_per_block,
 #                         hog_channel=hog_channel)
-notcar_features = extract_features(notcars, cspace=colorspace, orient=orient,
-                        pix_per_cell=pix_per_cell, cell_per_block=cell_per_block,
-                        hog_channel=hog_channel)
+# notcar_features = extract_features(notcars, cspace=colorspace, orient=orient,
+#                         pix_per_cell=pix_per_cell, cell_per_block=cell_per_block,
+#                         hog_channel=hog_channel)
