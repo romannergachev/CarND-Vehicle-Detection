@@ -1,14 +1,13 @@
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
-import numpy as np
-import cv2
 import glob
 import time
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 from scipy.ndimage.measurements import label
+from moviepy.editor import VideoFileClip
+import imageio
 
+from search_windows import search_different_windows, add_heat, apply_threshold, draw_labeled_bboxes, SearchWindows, BoundingBoxes
 from test import *
 
 # Read in cars and notcars
@@ -79,32 +78,79 @@ print('Test Accuracy of SVC = ', round(svc.score(x_test, y_test), 4))
 # Check the prediction time for a single sample
 t = time.time()
 
-image = cv2.imread('test_images/test1.jpg')
-draw_image = np.copy(image)
 
-windows = slide_window(image, x_start_stop=[None, None], y_start_stop=[np.int(image.shape[0] / 2), None],
-                       xy_window=(96, 96), xy_overlap=(0.5, 0.5))
+def test_on_image(name):
+    image = cv2.imread('out/' + name + '.png')
 
-hot_windows = search_windows(image, windows, svc, scaler, color_space=color_space,
-                             spatial_size=spatial_size, hist_bins=hist_bins,
-                             orient=orient, pix_per_cell=pix_per_cell,
-                             cell_per_block=cell_per_block,
-                             hog_channel=hog_channel, spatial_feat=spatial_feat,
-                             hist_feat=hist_feat, hog_feat=hog_feat)
+    draw_image = np.copy(image)
+    draw_image = cv2.cvtColor(draw_image, cv2.COLOR_BGR2RGB)
+    print(draw_image)
 
-window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)
+    hot_windows, all_windows = search_different_windows(image, svc, scaler, color_space=color_space,
+                                 spatial_size=spatial_size, hist_bins=hist_bins,
+                                 orient=orient, pix_per_cell=pix_per_cell,
+                                 cell_per_block=cell_per_block,
+                                 hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                 hist_feat=hist_feat, hog_feat=hog_feat)
 
-cv2.imwrite('output_images/test1_new1.png', window_img)
+    heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
+    # Add heat to each box in box list
+    heat = add_heat(heat, hot_windows)
+    # Apply threshold to help remove false positives
+    heat = apply_threshold(heat, 3)
+    # Visualize the heatmap when displaying
+    heatmap = np.clip(heat, 0, 255)
+    # Find final boxes from heatmap using label function
+    labels = label(heatmap)
+    draw_img = draw_labeled_bboxes(np.copy(image), labels)
 
-heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
-# Add heat to each box in box list
-heat = add_heat(heat, hot_windows)
-# Apply threshold to help remove false positives
-heat = apply_threshold(heat, 1)
-# Visualize the heatmap when displaying
-heatmap = np.clip(heat, 0, 255)
-# Find final boxes from heatmap using label function
-labels = label(heatmap)
-draw_img = draw_labeled_bboxes(np.copy(image), labels)
+    cv2.imwrite('output_images/' + name + '_heated.png', draw_img)
 
-cv2.imwrite('output_images/test1_heat1.png', draw_img)
+
+def detection_pipeline(image):
+    draw_image = np.copy(image)
+    draw_image = cv2.cvtColor(draw_image, cv2.COLOR_BGR2RGB)
+    hot_windows, all_windows = search_different_windows(draw_image, svc, scaler, color_space=color_space,
+                                                 spatial_size=spatial_size, hist_bins=hist_bins,
+                                                 orient=orient, pix_per_cell=pix_per_cell,
+                                                 cell_per_block=cell_per_block,
+                                                 hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                                 hist_feat=hist_feat, hog_feat=hog_feat)
+    heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
+    # Add heat to each box in box list
+    heat = add_heat(heat, hot_windows)
+    # Apply threshold to help remove false positives
+    heat = apply_threshold(heat, 3)
+    # Visualize the heatmap when displaying
+    heatmap = np.clip(heat, 0, 255)
+    # Find final boxes from heatmap using label function
+    labels = label(heatmap)
+    draw_img = draw_labeled_bboxes(np.copy(image), labels)
+
+    # windows.update(hot_windows)
+    # heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
+    # # Add heat to each box in box list
+    # heat = add_heat(heat, windows.allboxes)
+    # # Apply threshold to help remove false positives
+    # heat = apply_threshold(heat, 20)
+    # heatmap = np.clip(heat, 0, 255)
+    # # Find final boxes from heatmap using label function
+    # labels = label(heatmap)
+    # draw_img = draw_labeled_bboxes(draw_image, labels)
+
+    return draw_img
+
+
+# test_on_image('video0')
+# test_on_image('video1')
+# test_on_image('video2')
+# test_on_image('video3')
+# test_on_image('video4')
+# test_on_image('video5')
+
+# windows = BoundingBoxes(20)
+imageio.plugins.ffmpeg.download()
+white_output = 'project_video_annotated.mp4'
+clip1 = VideoFileClip("project_video.mp4")
+white_clip = clip1.fl_image(detection_pipeline)
+white_clip.write_videofile(white_output, audio=False)

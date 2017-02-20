@@ -1,9 +1,6 @@
 from moviepy.editor import VideoFileClip
 import imageio
 import cv2
-from camera import Camera
-from lane import Lane
-from transforamtion_pipeline import transform_image
 
 
 def detection_pipeline(img):
