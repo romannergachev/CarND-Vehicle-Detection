@@ -18,19 +18,18 @@ not_vehicles_train = glob.glob('non-vehicles/train/*.png')
 not_vehicles_test = glob.glob('non-vehicles/test/*.png')
 
 ### TODO: Tweak these parameters and see how the results change.
-color_space = 'LUV'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+color_space = 'HLS'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
 # LUV, channel = 1
 # YUV, channel = 2
 orient = 12  # HOG orientations
-pix_per_cell = 4  # HOG pixels per cell
+pix_per_cell = 16  # HOG pixels per cell
 cell_per_block = 2  # HOG cells per block
-hog_channel = 1  # Can be 0, 1, 2, or "ALL"
-spatial_size = (8, 8)  # Spatial binning dimensions
+hog_channel = "ALL"  # Can be 0, 1, 2, or "ALL"
+spatial_size = (16, 16)  # Spatial binning dimensions
 hist_bins = 32  # Number of histogram bins
 spatial_feat = True  # Spatial features on or off
 hist_feat = True  # Histogram features on or off
 hog_feat = True  # HOG features on or off
-
 
 car_train_features = extract_features(vehicles_train, color_space=color_space,
                                       spatial_size=spatial_size, hist_bins=hist_bins,
@@ -56,16 +55,17 @@ notcar_test_features = extract_features(not_vehicles_test, color_space=color_spa
                                         cell_per_block=cell_per_block,
                                         hog_channel=hog_channel, spatial_feat=spatial_feat,
                                         hist_feat=hist_feat, hog_feat=hog_feat)
+rand_state = np.random.randint(0, 100)
 
 x_stacked = np.vstack((car_train_features, notcar_train_features, car_test_features, notcar_test_features)).astype(np.float64)
 scaler = StandardScaler().fit(x_stacked)
 scaled_x = scaler.transform(x_stacked)
 
 y_tr = np.hstack((np.ones(len(car_train_features)), np.zeros(len(notcar_train_features))))
-x_train, y_train = shuffle(scaled_x[:(len(car_train_features) + len(notcar_train_features))], y_tr)
+x_train, y_train = shuffle(scaled_x[:(len(car_train_features) + len(notcar_train_features))], y_tr, random_state=rand_state)
 
 y_tst = np.hstack((np.ones(len(car_test_features)), np.zeros(len(notcar_test_features))))
-x_test, y_test = shuffle(scaled_x[(len(car_train_features) + len(notcar_train_features)):], y_tst)
+x_test, y_test = shuffle(scaled_x[(len(car_train_features) + len(notcar_train_features)):], y_tst, random_state=rand_state)
 
 print('Feature vector length:', len(x_train[0]))
 
@@ -94,52 +94,15 @@ hot_windows = search_windows(image, windows, svc, scaler, color_space=color_spac
 
 window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)
 
+cv2.imwrite('output_images/test1_new1.png', window_img)
+
 heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
-
-
-def add_heat(heatmap, bbox_list):
-    # Iterate through list of bboxes
-    for box in bbox_list:
-        # Add += 1 for all pixels inside each bbox
-        # Assuming each "box" takes the form ((x1, y1), (x2, y2))
-        heatmap[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
-
-    # Return updated heatmap
-    return heatmap  # Iterate through list of bboxes
-
-
-def apply_threshold(heatmap, threshold):
-    # Zero out pixels below the threshold
-    heatmap[heatmap <= threshold] = 0
-    # Return thresholded map
-    return heatmap
-
-
-def draw_labeled_bboxes(img, labels):
-    # Iterate through all detected cars
-    for car_number in range(1, labels[1] + 1):
-        # Find pixels with each car_number label value
-        nonzero = (labels[0] == car_number).nonzero()
-        # Identify x and y values of those pixels
-        nonzeroy = np.array(nonzero[0])
-        nonzerox = np.array(nonzero[1])
-        # Define a bounding box based on min/max x and y
-        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
-        # Draw the box on the image
-        cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
-    # Return the image
-    return img
-
-
 # Add heat to each box in box list
 heat = add_heat(heat, hot_windows)
-
 # Apply threshold to help remove false positives
-# heat = apply_threshold(heat, 1)
-
+heat = apply_threshold(heat, 1)
 # Visualize the heatmap when displaying
 heatmap = np.clip(heat, 0, 255)
-
 # Find final boxes from heatmap using label function
 labels = label(heatmap)
 draw_img = draw_labeled_bboxes(np.copy(image), labels)
