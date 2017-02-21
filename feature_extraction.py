@@ -4,7 +4,17 @@ from skimage.feature import hog
 
 
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, feature_vec=True):
-    # Call with two outputs if vis==True
+    """
+    Extracts hog features (and hog image if asked)
+
+    :param img: image to extract features
+    :param orient: number of orientations
+    :param pix_per_cell: number of piexels per cell
+    :param cell_per_block: number of cells per block
+    :param vis: should hog image be received
+    :param feature_vec: returns result as feature vector if true
+    :return: extracted features (and hog image if specified)
+    """
     if vis:
         features, hog_image = hog(img, orientations=orient,
                                   pixels_per_cell=(pix_per_cell, pix_per_cell),
@@ -24,15 +34,28 @@ def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, featu
 
 # Define a function to compute binned color features
 def bin_spatial(img, size=(32, 32)):
+    """
+    Extracts spacial features
+
+    :param img: image
+    :param size: size if the vector
+    :return: spacial features
+    """
     # Use cv2.resize().ravel() to create the feature vector
     features = cv2.resize(img, size).ravel()
     # Return the feature vector
     return features
 
 
-# Define a function to compute color histogram features
-# NEED TO CHANGE bins_range if reading .png files with mpimg!
 def color_hist(img, nbins=32, bins_range=(0, 256)):
+    """
+    Extracts histogram features from the image
+
+    :param img: image
+    :param nbins: number of bins to extract
+    :param bins_range: bins extraction range
+    :return: extracted features
+    """
     # Compute the histogram of the color channels separately
     channel1_hist = np.histogram(img[:, :, 0], bins=nbins, range=bins_range)
     channel2_hist = np.histogram(img[:, :, 1], bins=nbins, range=bins_range)
@@ -43,10 +66,25 @@ def color_hist(img, nbins=32, bins_range=(0, 256)):
     return hist_features
 
 
-# Define a function to extract features from a list of images
-# Have this function call bin_spatial() and color_hist()
 def extract_features(imgs, color_space='RGB', spatial_size=(32, 32), hist_bins=32, orient=9, pix_per_cell=8,
                      cell_per_block=2, hog_channel=0, spatial_feat=True, hist_feat=True, hog_feat=True):
+    """
+    Method extract features from images
+
+    :param imgs: images paths
+    :param color_space: color space to use
+    :param spatial_size: spatial feature size
+    :param hist_bins: histogra, feature bin size
+    :param orient: orientation for hog feature
+    :param pix_per_cell: number of pixels per cell for hog
+    :param cell_per_block: number of cells per block for hog
+    :param hog_channel: number of hog channels
+    :param spatial_feat: should spatial feature extraction be used
+    :param hist_feat: should histogram feature extraction be used
+    :param hog_feat: should hog feature extraction be used
+    :return: extracted features
+    """
+
     # Create a list to append feature vectors to
     features = []
     # Iterate through the list of images
@@ -68,14 +106,16 @@ def extract_features(imgs, color_space='RGB', spatial_size=(32, 32), hist_bins=3
                 feature_image = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
         else:
             feature_image = np.copy(image)
-
+        # spatial feature extraction
         if spatial_feat:
             spatial_features = bin_spatial(feature_image, size=spatial_size)
             file_features.append(spatial_features)
+        # histogram feature extraction
         if hist_feat:
             # Apply color_hist()
             hist_features = color_hist(feature_image, nbins=hist_bins)
             file_features.append(hist_features)
+        # hog feature extraction
         if hog_feat:
             # Call get_hog_features() with vis=False, feature_vec=True
             if hog_channel == 'ALL':
@@ -97,6 +137,22 @@ def extract_features(imgs, color_space='RGB', spatial_size=(32, 32), hist_bins=3
 
 def single_img_features(img, color_space='RGB', spatial_size=(32, 32), hist_bins=32, orient=9, pix_per_cell=8,
                         cell_per_block=2, hog_channel=0, spatial_feat=True, hist_feat=True, hog_feat=True):
+    """
+    Extracts features from a single image as a part of sliding window progress
+
+    :param img: image
+    :param color_space: color space selected
+    :param spatial_size: spacial size
+    :param hist_bins: number of histogram bins
+    :param orient: number of orientations
+    :param pix_per_cell: number of pixels per cell
+    :param cell_per_block: number of cells per block
+    :param hog_channel: selected hog channel(s)
+    :param spatial_feat: should spatial feature extraction be used
+    :param hist_feat: should histogram feature extraction be used
+    :param hog_feat: should hog feature extraction be used
+    :return: extracted features
+    """
     # 1) Define an empty list to receive features
     img_features = []
     # 2) Apply color conversion if other than 'RGB'
