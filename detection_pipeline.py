@@ -1,4 +1,3 @@
-import glob
 import time
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
@@ -7,14 +6,8 @@ from scipy.ndimage.measurements import label
 from moviepy.editor import VideoFileClip
 import imageio
 
-from search_windows import search_different_windows, add_heat, apply_threshold, draw_labeled_bboxes, SearchWindows, BoundingBoxes
-from test import *
-
-# Read in cars and notcars
-vehicles_train = glob.glob('vehicles/train/*/*.png')
-vehicles_test = glob.glob('vehicles/test/*/*.png')
-not_vehicles_train = glob.glob('non-vehicles/train/*.png')
-not_vehicles_test = glob.glob('non-vehicles/test/*.png')
+from search_windows import search_different_windows, add_heat, apply_threshold, draw_labeled_bboxes, SearchWindows
+from feature_extraction import *
 
 ### TODO: Tweak these parameters and see how the results change.
 color_space = 'HLS'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
@@ -30,31 +23,13 @@ spatial_feat = True  # Spatial features on or off
 hist_feat = True  # Histogram features on or off
 hog_feat = True  # HOG features on or off
 
-car_train_features = extract_features(vehicles_train, color_space=color_space,
-                                      spatial_size=spatial_size, hist_bins=hist_bins,
-                                      orient=orient, pix_per_cell=pix_per_cell,
-                                      cell_per_block=cell_per_block,
-                                      hog_channel=hog_channel, spatial_feat=spatial_feat,
-                                      hist_feat=hist_feat, hog_feat=hog_feat)
-car_test_features = extract_features(vehicles_test, color_space=color_space,
-                                     spatial_size=spatial_size, hist_bins=hist_bins,
-                                     orient=orient, pix_per_cell=pix_per_cell,
-                                     cell_per_block=cell_per_block,
-                                     hog_channel=hog_channel, spatial_feat=spatial_feat,
-                                     hist_feat=hist_feat, hog_feat=hog_feat)
-notcar_train_features = extract_features(not_vehicles_train, color_space=color_space,
-                                         spatial_size=spatial_size, hist_bins=hist_bins,
-                                         orient=orient, pix_per_cell=pix_per_cell,
-                                         cell_per_block=cell_per_block,
-                                         hog_channel=hog_channel, spatial_feat=spatial_feat,
-                                         hist_feat=hist_feat, hog_feat=hog_feat)
-notcar_test_features = extract_features(not_vehicles_test, color_space=color_space,
-                                        spatial_size=spatial_size, hist_bins=hist_bins,
-                                        orient=orient, pix_per_cell=pix_per_cell,
-                                        cell_per_block=cell_per_block,
-                                        hog_channel=hog_channel, spatial_feat=spatial_feat,
-                                        hist_feat=hist_feat, hog_feat=hog_feat)
+
+
+
+
 rand_state = np.random.randint(0, 100)
+
+car_train_features, car_test_features, notcar_train_features, notcar_test_features = extract_features(color_space, spatial_size, hist_bins, orient, pix_per_cell, cell_per_block, hog_channel, spatial_feat, hist_feat, hog_feat)
 
 x_stacked = np.vstack((car_train_features, notcar_train_features, car_test_features, notcar_test_features)).astype(np.float64)
 scaler = StandardScaler().fit(x_stacked)
@@ -116,27 +91,27 @@ def detection_pipeline(image):
                                                  cell_per_block=cell_per_block,
                                                  hog_channel=hog_channel, spatial_feat=spatial_feat,
                                                  hist_feat=hist_feat, hog_feat=hog_feat)
+    # heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
+    # # Add heat to each box in box list
+    # heat = add_heat(heat, hot_windows)
+    # # Apply threshold to help remove false positives
+    # heat = apply_threshold(heat, 3)
+    # # Visualize the heatmap when displaying
+    # heatmap = np.clip(heat, 0, 255)
+    # # Find final boxes from heatmap using label function
+    # labels = label(heatmap)
+    # draw_img = draw_labeled_bboxes(np.copy(image), labels)
+
+    windows.update(hot_windows)
     heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
     # Add heat to each box in box list
-    heat = add_heat(heat, hot_windows)
+    heat = add_heat(heat, windows.combined_windows)
     # Apply threshold to help remove false positives
-    heat = apply_threshold(heat, 3)
-    # Visualize the heatmap when displaying
+    heat = apply_threshold(heat, 20)
     heatmap = np.clip(heat, 0, 255)
     # Find final boxes from heatmap using label function
     labels = label(heatmap)
     draw_img = draw_labeled_bboxes(np.copy(image), labels)
-
-    # windows.update(hot_windows)
-    # heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
-    # # Add heat to each box in box list
-    # heat = add_heat(heat, windows.allboxes)
-    # # Apply threshold to help remove false positives
-    # heat = apply_threshold(heat, 20)
-    # heatmap = np.clip(heat, 0, 255)
-    # # Find final boxes from heatmap using label function
-    # labels = label(heatmap)
-    # draw_img = draw_labeled_bboxes(draw_image, labels)
 
     return draw_img
 
@@ -148,7 +123,7 @@ def detection_pipeline(image):
 # test_on_image('video4')
 # test_on_image('video5')
 
-# windows = BoundingBoxes(20)
+windows = SearchWindows(20)
 imageio.plugins.ffmpeg.download()
 white_output = 'project_video_annotated.mp4'
 clip1 = VideoFileClip("project_video.mp4")

@@ -1,6 +1,14 @@
+import glob
+
 import numpy as np
 import cv2
 from skimage.feature import hog
+
+# Read in cars and notcars
+vehicles_train = glob.glob('vehicles/train/*/*.png')
+vehicles_test = glob.glob('vehicles/test/*/*.png')
+not_vehicles_train = glob.glob('non-vehicles/train/*.png')
+not_vehicles_test = glob.glob('non-vehicles/test/*.png')
 
 
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, feature_vec=True):
@@ -195,3 +203,47 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32), hist_bins
 
     # 9) Return concatenated array of features
     return np.concatenate(img_features)
+
+
+def extract_features_from_datasets(color_space, spatial_size, hist_bins, orient, pix_per_cell, cell_per_block, hog_channel, spatial_feat, hist_feat, hog_feat):
+    """
+    Extracts features from the datasets
+
+    :param color_space: color space selected
+    :param spatial_size: spacial size
+    :param hist_bins: number of histogram bins
+    :param orient: number of orientations
+    :param pix_per_cell: number of pixels per cell
+    :param cell_per_block: number of cells per block
+    :param hog_channel: selected hog channel(s)
+    :param spatial_feat: should spatial feature extraction be used
+    :param hist_feat: should histogram feature extraction be used
+    :param hog_feat: should hog feature extraction be used
+    :return: features
+    """
+    car_train_features = extract_features(vehicles_train, color_space=color_space,
+                                          spatial_size=spatial_size, hist_bins=hist_bins,
+                                          orient=orient, pix_per_cell=pix_per_cell,
+                                          cell_per_block=cell_per_block,
+                                          hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                          hist_feat=hist_feat, hog_feat=hog_feat)
+    car_test_features = extract_features(vehicles_test, color_space=color_space,
+                                         spatial_size=spatial_size, hist_bins=hist_bins,
+                                         orient=orient, pix_per_cell=pix_per_cell,
+                                         cell_per_block=cell_per_block,
+                                         hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                         hist_feat=hist_feat, hog_feat=hog_feat)
+    notcar_train_features = extract_features(not_vehicles_train, color_space=color_space,
+                                             spatial_size=spatial_size, hist_bins=hist_bins,
+                                             orient=orient, pix_per_cell=pix_per_cell,
+                                             cell_per_block=cell_per_block,
+                                             hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                             hist_feat=hist_feat, hog_feat=hog_feat)
+    notcar_test_features = extract_features(not_vehicles_test, color_space=color_space,
+                                            spatial_size=spatial_size, hist_bins=hist_bins,
+                                            orient=orient, pix_per_cell=pix_per_cell,
+                                            cell_per_block=cell_per_block,
+                                            hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                            hist_feat=hist_feat, hog_feat=hog_feat)
+
+    return car_train_features, car_test_features, notcar_train_features, notcar_test_features
