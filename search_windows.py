@@ -3,48 +3,66 @@ from collections import deque
 import numpy as np
 import cv2
 
-from test import single_img_features
+from feature_extraction import single_img_features
 
 
 class SearchWindows:
-    def __init__(self, n=10):
-        # length of queue to store data
+    """
+    Class intended to decrease false detection and make new detected rectangles align with the previously detected ones
+    """
+    def __init__(self, n):
+        # number of windows to store
         self.n = n
-        # hot windows of the last n images
+        # last n windows "hot" windows stored
         self.recent_windows = deque([], maxlen=n)
-        # current boxes
+        # current windows
         self.current_windows = None
-        self.windows = []
+        # combined windows for analysis
+        self.combined_windows = []
 
-    def add_windows(self):
-        self.recent_windows.appendleft(self.current_windows)
-
-    def pop(self):
-        if self. n_buffered > 0:
-            self.recent_windows.pop()
-
-    def set_current_windows(self, windows):
-        self.current_windows = windows
-
-    def get_windows(self):
+    def combine_windows(self):
+        """
+        Combines recent detected windows to provide better filtering from false positives
+        """
         windows = []
         for local_windows in self.recent_windows:
             windows += local_windows
         if len(windows) == 0:
-            self.windows = None
+            self.combined_windows = None
         else:
-            self.windows = windows
+            self.combined_windows = windows
 
-    def update(self, windows):
-        self.set_current_windows(windows)
-        self.add_windows()
-        self.get_windows()
+    def update_tracking(self, windows):
+        """
+        Updates class with new "hot" windows
+        :param windows: hot windows coordinates
+        """
+        self.current_windows = windows
+        self.recent_windows.appendleft(self.current_windows)
+        self.combine_windows()
 
 
-# Define a function you will pass an image
-# and the list of windows to be searched (output of slide_windows())
 def search_windows(img, windows, clf, scaler, color_space='RGB', spatial_size=(32, 32), hist_bins=32, orient=9,
                    pix_per_cell=8, cell_per_block=2, hog_channel=0, spatial_feat=True, hist_feat=True, hog_feat=True):
+    """
+    Detect cars at the image using search windows approach
+
+    :param img: image
+    :param windows: windows list
+    :param clf: classifier
+    :param scaler: scale function
+    :param color_space: selected color space
+    :param spatial_size: spacial size
+    :param hist_bins: number of histogram bins
+    :param orient: number of orientations
+    :param pix_per_cell: number of pixels per cell
+    :param cell_per_block: number of cells per block
+    :param hog_channel: hog channel selected
+    :param spatial_feat: true if spatial feature to be used
+    :param hist_feat: true if histogram feature to be used
+    :param hog_feat: true if hog feature to be used
+    :return: windows with positive detections
+    """
     # 1) Create an empty list to receive positive detection windows
     on_windows = []
     # 2) Iterate over all windows in the list
@@ -70,6 +88,13 @@ def search_windows(img, windows, clf, scaler, color_space='RGB', spatial_size=(3
 
 
 def add_heat(heatmap, bbox_list):
+    """
+    Add heat for each pixel in the detected boxes
+
+    :param heatmap: heat image
+    :param bbox_list: list of windows
+    :return: heat image
+    """
     # Iterate through list of bboxes
     if bbox_list:
         for box in bbox_list:
@@ -82,6 +107,13 @@ def add_heat(heatmap, bbox_list):
 
 
 def apply_threshold(heatmap, threshold):
+    """
+    Apply threshold to filter out false positives
+
+    :param heatmap: heat image
+    :param threshold: threshold for positive detections
+    :return: heat image
+    """
     # Zero out pixels below the threshold
     heatmap[heatmap <= threshold] = 0
     # Return thresholded map
@@ -89,6 +121,12 @@ def apply_threshold(heatmap, threshold):
 
 
 def draw_labeled_bboxes(img, labels):
+    """
+    Draws labeled boxes
+    :param img: image to draw on
+    :param labels: labels to draw
+    :return:
+    """
     # Iterate through all detected cars
     for car_number in range(1, labels[1] + 1):
         # Find pixels with each car_number label value
@@ -106,22 +144,40 @@ def draw_labeled_bboxes(img, labels):
 
 def search_different_windows(image, clf, scaler, color_space='HLS', spatial_size=(32, 32), hist_bins=32, orient=9,
                              pix_per_cell=8, cell_per_block=2, hog_channel=0, spatial_feat=True, hist_feat=True, hog_feat=True):
+    """
+    Generates different size search windows to look for cars
+
+    :param image: image
+    :param clf: classifier
+    :param scaler: scale
+    :param color_space: selected color space
+    :param spatial_size: spatial size
+    :param hist_bins: histogram bin number
+    :param orient: number of orientations
+    :param pix_per_cell: number of pixels per cell
+    :param cell_per_block: number of cells per block
+    :param hog_channel: selected hog channel
+    :param spatial_feat: true if spatial feature to be used
+    :param hist_feat: true if histogram feature to be used
+    :param hog_feat: true if hog feature to be used
+    :return: hot windows
+    """
     hot_windows = []
-    all_windows = []
+    overlap = 0.75
+    width1 = 256
+    width2 = 192
+    width3 = 128
+    width4 = 64
 
-    X_start_stop = [[None, None], [None, None], [None, None], [None, None]]
-    w0, w1, w2, w3 = 240, 180, 120, 70
-    o0, o1, o2, o3 = 0.75, 0.75, 0.75, 0.75
-    XY_window = [(w0, w0), (w1, w1), (w2, w2), (w3, w3)]
-    XY_overlap = [(o0, o0), (o1, o1), (o2, o2), (o3, o3)]
+    x_start_stop = [[None, None], [None, None], [None, None], [None, None]]
+    xy_window = [(width1, width1), (width2, width2), (width3, width3), (width4, width4)]
+    xy_overlap = [(overlap, overlap), (overlap, overlap), (overlap, overlap), (overlap, overlap)]
     yi0, yi1, yi2, yi3 = 380, 380, 395, 405
-    Y_start_stop = [[yi0, yi0 + w0 / 2], [yi1, yi1 + w1 / 2], [yi2, yi2 + w2 / 2], [yi3, yi3 + w3 / 2]]
+    y_start_stop = [[yi0, yi0 + width1 / 2], [yi1, yi1 + width2 / 2], [yi2, yi2 + width3 / 2], [yi3, yi3 + width4 / 2]]
 
-    for i in range(len(Y_start_stop)):
-        windows = slide_window(image, x_start_stop=X_start_stop[i], y_start_stop=Y_start_stop[i],
-                               xy_window=XY_window[i], xy_overlap=XY_overlap[i])
-
-        all_windows += [windows]
+    for i in range(len(y_start_stop)):
+        windows = slide_window(image, x_start_stop=x_start_stop[i], y_start_stop=y_start_stop[i],
+                               xy_window=xy_window[i], xy_overlap=xy_overlap[i])
 
         hot_windows += search_windows(image, windows, clf, scaler, color_space=color_space,
                                       spatial_size=spatial_size, hist_bins=hist_bins,
@@ -130,15 +186,20 @@ def search_different_windows(image, clf, scaler, color_space='HLS', spatial_size
                                       hog_channel=hog_channel, spatial_feat=spatial_feat,
                                       hist_feat=hist_feat, hog_feat=hog_feat)
 
-    return hot_windows, all_windows
+    return hot_windows
 
 
-# Define a function that takes an image,
-# start and stop positions in both x and y,
-# window size (x and y dimensions),
-# and overlap fraction (for both x and y)
 def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
-    # If x and/or y start/stop positions not defined, set to image size
+    """
+    Use sliding windows approach to generate all possible search windows
+
+    :param img: image
+    :param x_start_stop: coordinates for x start stop positions
+    :param y_start_stop: coordinates for y start stop positions
+    :param xy_window: windows size
+    :param xy_overlap: windows overlap
+    :return: search windows list
+    """
     if x_start_stop[0] is None:
         x_start_stop[0] = 0
     if x_start_stop[1] is None:
@@ -176,8 +237,16 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], xy_w
     return window_list
 
 
-# Define a function to draw bounding boxes
 def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
+    """
+    Draws bounding boxes
+
+    :param img: image
+    :param bboxes: boxes coordinates
+    :param color: color of the box
+    :param thick: thickness of the lines
+    :return: image with drawn boxes
+    """
     # Make a copy of the image
     imcopy = np.copy(img)
     # Iterate through the bounding boxes
