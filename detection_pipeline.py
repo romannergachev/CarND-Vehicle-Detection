@@ -6,7 +6,7 @@ from scipy.ndimage.measurements import label
 from moviepy.editor import VideoFileClip
 import imageio
 
-from search_windows import search_different_windows, add_heat, apply_threshold, draw_labeled_bboxes, SearchWindows
+from search_windows import search_different_windows, add_heat, apply_threshold, draw_labeled_bboxes, SearchWindows, draw_boxes
 from feature_extraction import *
 
 
@@ -15,18 +15,20 @@ def test_on_image(name):
     Test pipeline for image recognition
     :param name: filename
     """
-    image = cv2.imread('out/' + name + '.png')
+    image = cv2.imread('test_images/' + name + '.jpg')
 
     draw_image = np.copy(image)
     draw_image = cv2.cvtColor(draw_image, cv2.COLOR_BGR2RGB)
     print(draw_image)
 
-    hot_windows = search_different_windows(image, svc, scaler, color_space=color_space,
+    hot_windows, all_windows = search_different_windows(image, svc, scaler, color_space=color_space,
                                                         spatial_size=spatial_size, hist_bins=hist_bins,
                                                         orient=orient, pix_per_cell=pix_per_cell,
                                                         cell_per_block=cell_per_block,
                                                         hog_channel=hog_channel, spatial_feat=spatial_feat,
                                                         hist_feat=hist_feat, hog_feat=hog_feat)
+
+    all_boxes = draw_boxes(draw_image, all_windows)
 
     heat = np.zeros_like(draw_image[:, :, 0]).astype(np.float)
     # Add heat to each box in box list
@@ -38,8 +40,8 @@ def test_on_image(name):
     # Find final boxes from heatmap using label function
     labels = label(heatmap)
     draw_img = draw_labeled_bboxes(np.copy(image), labels)
-
-    cv2.imwrite('output_images/' + name + '_heated.png', draw_img)
+    all_boxes = cv2.cvtColor(all_boxes, cv2.COLOR_RGB2BGR)
+    cv2.imwrite('output_images/' + name + '_boxes.png', all_boxes)
 
 
 def detection_pipeline(image):
@@ -50,7 +52,7 @@ def detection_pipeline(image):
     """
     draw_image = np.copy(image)
     draw_image = cv2.cvtColor(draw_image, cv2.COLOR_BGR2RGB)
-    hot_windows = search_different_windows(draw_image, svc, scaler, color_space=color_space,
+    hot_windows, all_windows = search_different_windows(draw_image, svc, scaler, color_space=color_space,
                                                         spatial_size=spatial_size, hist_bins=hist_bins,
                                                         orient=orient, pix_per_cell=pix_per_cell,
                                                         cell_per_block=cell_per_block,
@@ -115,7 +117,7 @@ print('Test Accuracy of SVC = ', round(svc.score(x_test, y_test), 4))
 # Check the prediction time for a single sample
 t = time.time()
 
-# test_on_image('video0')
+test_on_image('test4')
 # test_on_image('video1')
 # test_on_image('video2')
 # test_on_image('video3')
@@ -128,5 +130,5 @@ windows = SearchWindows(20)
 imageio.plugins.ffmpeg.download()
 white_output = 'project_video_annotated.mp4'
 clip1 = VideoFileClip("project_video.mp4")
-white_clip = clip1.fl_image(detection_pipeline)
-white_clip.write_videofile(white_output, audio=False)
+# white_clip = clip1.fl_image(detection_pipeline)
+# white_clip.write_videofile(white_output, audio=False)

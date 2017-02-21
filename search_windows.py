@@ -163,21 +163,30 @@ def search_different_windows(image, clf, scaler, color_space='HLS', spatial_size
     :return: hot windows
     """
     hot_windows = []
+    all_windows = []
     overlap = 0.75
-    width1 = 256
-    width2 = 192
-    width3 = 128
-    width4 = 64
+    width1 = 240
+    width2 = 180
+    width3 = 120
+    width4 = 70
+    y_start1 = 380
+    y_start2 = 380
+    y_start3 = 395
+    y_start4 = 405
 
     x_start_stop = [[None, None], [None, None], [None, None], [None, None]]
     xy_window = [(width1, width1), (width2, width2), (width3, width3), (width4, width4)]
     xy_overlap = [(overlap, overlap), (overlap, overlap), (overlap, overlap), (overlap, overlap)]
-    yi0, yi1, yi2, yi3 = 380, 380, 395, 405
-    y_start_stop = [[yi0, yi0 + width1 / 2], [yi1, yi1 + width2 / 2], [yi2, yi2 + width3 / 2], [yi3, yi3 + width4 / 2]]
+    y_start_stop = [[y_start1, y_start1 + width1 / 2],
+                    [y_start2, y_start2 + width2 / 2],
+                    [y_start3, y_start3 + width3 / 2],
+                    [y_start4, y_start4 + width4 / 2]]
 
     for i in range(len(y_start_stop)):
         windows = slide_window(image, x_start_stop=x_start_stop[i], y_start_stop=y_start_stop[i],
                                xy_window=xy_window[i], xy_overlap=xy_overlap[i])
+
+        all_windows += windows
 
         hot_windows += search_windows(image, windows, clf, scaler, color_space=color_space,
                                       spatial_size=spatial_size, hist_bins=hist_bins,
@@ -186,7 +195,7 @@ def search_different_windows(image, clf, scaler, color_space='HLS', spatial_size
                                       hog_channel=hog_channel, spatial_feat=spatial_feat,
                                       hist_feat=hist_feat, hog_feat=hog_feat)
 
-    return hot_windows
+    return hot_windows, all_windows
 
 
 def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None], xy_window=(64, 64), xy_overlap=(0.5, 0.5)):
