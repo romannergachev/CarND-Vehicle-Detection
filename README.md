@@ -19,6 +19,14 @@ The goals / steps of this project are the following:
 [image42]: ./output_images/test4_new.png
 [image5]: ./output_images/test1_new1.png
 [image51]: ./output_images/test1_heat1.png
+[image61]: ./output_images/hog_car2_hls.png
+[image62]: ./output_images/hog_notcar_HLS.png
+[image63]: ./output_images/hog_car2_rgb.png
+[image64]: ./output_images/hog_notcar_rgb.png
+[image65]: ./output_images/histogram_car1.png
+[image66]: ./output_images/histogram_notcar1.png
+[image67]: ./output_images/color_car1.png
+[image68]: ./output_images/color_notcar2.png
 [video1]: ./project_video_annotated.mp4
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
@@ -42,14 +50,54 @@ Here is an example using the `HLS` color space and HOG parameters of `orientatio
 
 ####2. Choice of HOG parameters.
 
-During the last Udacity lesson I've been experimenting with different parameters and got to some conclusions. I liked LUV, HLS detection capabilities, but still there were some issues.
+During the last Udacity lesson I've been experimenting with different parameters and got to some conclusions. I liked LUV, HLS and HSV detection capabilities, but still there were some issues.
 But that was not enough since I hadn't been table to test all the combinations.
 That's why I continued to experiment during the implementation and get to the conclusion that parameters in lines 75 through 85 in `detection_pipeline.py` provide me best
 recognition results.
 
+Oriented gradients are more distinguishable in HLS space, than in RGB space, the most interesting here is 2 channel in HLS:
+
+*Car hog image in HLS:*
+![alt text][image61]
+
+*Not a car hog image in HLS:*
+![alt text][image62]
+
+*Car hog image in RGB:*
+![alt text][image63]
+
+*Not a car hog image in RGB:*
+![alt text][image64]
+
+
+Here are different histogram distributions in different spaces, HLS pictures look pretty interesting with very high level of saturation for the car image case:
+
+*Car histograms in different color spaces:*
+![alt text][image65]
+
+*Not a car histograms in different color spaces:*
+![alt text][image66]
+
+Color distributions are also quite different in both cases, so we definitely can use that as a training feature to distinguish between car and not a car: 
+
+*Car color distribution:*
+![alt text][image67]
+
+*Not a car color distribution:*
+![alt text][image68]
+
 ####3. Classifier training
 
-I trained a linear SVM as was suggested and it is located in lines 108 through 118 `detection_pipeline.py`. 
+I've tried 3 different classifiers: GaussianNB, DecisionTreeClassifier and LinearSVC. I've measured speed and test accuracy of this classifiers and it appeared that
+GaussianNB was the fastest one, LinearSVC was around 5 times slower and DecisionTreeClassifier was the slowest one - 16 times slower than LinearSVC. 
+
+But when it comes to test accuracy - DecisionTreeClassifier and LinearSVC showed best accuracy (actually LinearSVC a little better) compared
+to the GaussianNB that showed the worst accuracy of this 3 classifiers.
+
+As a result, I've decided to use LinearSVC as my classifier since it is one of the fastest and most accurate and in addition as it was mentioned in the 
+lectures - it works best with HOG features.
+
+LinearSVC it is located in lines 108 through 118 `detection_pipeline.py`. 
 Before training itself - I've normalised the data and shuffled them in lines 91 through 104 `detection_pipeline.py`.
 
 ###Sliding Window Search
@@ -113,3 +161,4 @@ The last thing I would like to mention is that, the there are different kind of 
 that we need to train the vehicle to recognise trucks, humans, animals, even maybe planes (what if it somehow landed on the road). 
 
 So we probably need to use not only the computer vision with machine learning, but also some kind of different sensors to generalise different things that could potentially block the road.
+
